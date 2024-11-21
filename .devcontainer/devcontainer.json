@@ -21,8 +21,8 @@
     "containerEnv": {
         "JWT_SECRET": "d9f2b9e8a63e45f293d79c4183a4e017e62c3c91e2d5bf3d5e6ea2f6b7bc9171"
     },
-
     "workspaceFolder": "/workspace/dsp_final",  // root folder of your project
     "mounts": [
         "source=${localWorkspaceFolder},target=/workspace/dsp_final,type=bind"
+    ]
 }
