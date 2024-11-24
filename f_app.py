@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, g
+from flask import Flask, render_template, request, session, jsonify, g, redirect, url_for
 import mysql.connector
 from cryptography.fernet import Fernet
 import bcrypt
@@ -7,24 +7,39 @@ import hashlib
 from functools import wraps
 import time
 import os
+from dotenv import load_dotenv
+
+
+# Load environment variables
+load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
 
-# Encryption and Decryption Setup
-SECRET_KEY = Fernet.generate_key()
-cipher = Fernet(SECRET_KEY)
+# Load Fernet Secret Key for encryption/decryption
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable not set. Please set it before running the app.")
 
-# JWT Secret for Encoding/Decoding tokens
+# Validate Fernet key
+try:
+    cipher = Fernet(SECRET_KEY.encode())
+except ValueError:
+    raise ValueError("SECRET_KEY is invalid. Ensure it is a 32-byte base64-encoded string.")
+
+# Load JWT Secret
 JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:
     raise ValueError("JWT_SECRET environment variable not set. Please set it before running the app.")
 
-
-# Database connection
+# Database connection setup
 def get_db():
     if 'db' not in g:
-        g.db = mysql.connector.connect(user='root', password='mysqlgit15', database='dsp_db')
+        g.db = mysql.connector.connect(
+            user=os.getenv("DB_USER", "root"),
+            password=os.getenv("DB_PASSWORD", ""),
+            database=os.getenv("DB_NAME", "dsp_db")
+        )
     return g.db
 
 @app.teardown_appcontext
@@ -36,7 +51,9 @@ def close_db(exception):
 # Root route
 @app.route('/')
 def home():
-    return "Welcome to the Secure Database API!" 
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    return "Welcome to the Secure Database API!"
 
 # Decorator for JWT Authentication
 def token_required(f):
@@ -56,12 +73,41 @@ def token_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+@app.route("/dashboard")
+def dashboard():
+    # Retrieve the token from the query string
+    token = request.args.get("token")
+    if token:
+        try:
+            data = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            g.user_id = data["user_id"]
+            g.role = data["role"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"message": "Token has expired"}), 403
+        except jwt.InvalidTokenError:
+            return jsonify({"message": "Invalid token"}), 403
+    else:
+        return jsonify({"message": "Token is missing"}), 403
+    
+    # Use token data from g (user_id, role)
+    if g.role == "H":
+        # Render the template for the admin role
+        return render_template("hadmin_data.html", user_id=g.user_id)
+    elif g.role == "R":
+        # Render the template for the user role
+        return render_template("ruser_data.html", user_id=g.user_id)
+    else:
+        # If the role is not recognized, return an error message
+        return jsonify({"message": "Unauthorized role"}), 403
+
 # User Authentication: Login Route
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET','POST'])
 def login():
-    data = request.json
-    username = data['username']
-    password = data['password']
+    if request.method == 'GET':
+        return render_template("login.html")
+    username = request.form['username']
+    password = request.form['password']
 
     db = get_db()
     cursor = db.cursor(dictionary=True)
@@ -73,7 +119,8 @@ def login():
             {'user_id': user['id'], 'role': user['role'], 'exp': time.time() + 3600},
             JWT_SECRET, algorithm='HS256'
         )
-        return jsonify({"message": "Login successful", "token": token})
+        response = jsonify({"message": "Login successful", "token": token})
+        return redirect(url_for("dashboard", token=token))
     return jsonify({"message": "Invalid credentials"}), 401
 
 # Basic Access Control and Query Route
@@ -96,44 +143,30 @@ def query():
     query_hash = hashlib.sha256(str(results).encode()).hexdigest()
     return jsonify({"data": results, "query_hash": query_hash})
 
-# Data Insertion Route (Only for 'H' Role)
-@app.route('/insert', methods=['POST'])
-@token_required
-def insert():
-    if g.role != 'H':
-        return jsonify({"message": "Unauthorized"}), 403
 
-    data = request.json
-
-    # Encrypt Sensitive Data (Gender, Age)
-    encrypted_gender = cipher.encrypt(str(data['gender']).encode())
-    encrypted_age = cipher.encrypt(str(data['age']).encode())
-
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute("INSERT INTO health_info (first_name, last_name, gender, age, weight, height, health_history) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                   (data['first_name'], data['last_name'], encrypted_gender, encrypted_age, data['weight'], data['height'], data['health_history']))
-    db.commit()
-
-    return jsonify({"message": "Data inserted successfully"})
-
-# Data Encryption for Sensitive Fields
-@app.route('/get_sensitive_data', methods=['GET'])
-@token_required
-def get_sensitive_data():
+@app.route('/api/data', methods=['GET'])
+@token_required  # Ensure only authenticated users can access this data
+def get_data():
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, gender, age, weight, height, health_history FROM health_info")
-    results = cursor.fetchall()
+    
+    try:
+        cursor.execute("SELECT * FROM health_info")
+        results = cursor.fetchall()
+        
+        # Decrypt sensitive fields before sending data
+        for record in results:
+            record['gender'] = cipher.decrypt(record['gender'].encode()).decode()
+            record['age'] = cipher.decrypt(record['age'].encode()).decode()
+        
+        return jsonify(results)  # Send the data as JSON
+    except Exception as e:
+        return jsonify({"message": "Error fetching data", "error": str(e)}), 500
+    finally:
+        cursor.close()
 
-    # Decrypt sensitive fields before returning them
-    for record in results:
-        record['gender'] = cipher.decrypt(record['gender']).decode()
-        record['age'] = cipher.decrypt(record['age']).decode()
 
-    return jsonify(results)
-
-# Protect Query Integrity: Verifying Data Hash
+# Verifying Query Integrity
 @app.route('/verify_query', methods=['POST'])
 @token_required
 def verify_query():
@@ -149,6 +182,8 @@ def verify_query():
     else:
         return jsonify({"message": "Query integrity failed"}), 400
 
-# Run the Flask app
+# Running the Flask app
 if __name__ == '__main__':
     app.run(debug=True)
+
+

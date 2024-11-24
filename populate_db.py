@@ -1,6 +1,15 @@
 import mysql.connector
 import bcrypt
 import random
+import os
+from dotenv import load_dotenv
+
+
+load_dotenv()
+user=os.getenv("USER")
+password=os.getenv("PASSWORD")
+host=os.getenv("HOST")
+database=os.getenv("DATABASE")
 
 # Predefined lists of names, genders, health history, etc.
 first_names = ['John', 'Jane', 'Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Hank']
@@ -23,7 +32,7 @@ health_histories = [
 ]
 
 # Establish MySQL connection
-conn = mysql.connector.connect(user='root', password='mysqlgit15', database='dsp_db')
+conn = mysql.connector.connect(user=user, password=password, database=database)
 cursor = conn.cursor()
 
 # Populate health_info table with random values
