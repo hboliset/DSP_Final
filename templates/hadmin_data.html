@@ -15,9 +15,11 @@
   <body>
     <div class="container mt-5">
       <h1>Data Table</h1>
+      <button type="button" class="btn btn-success mb-2" id="insert">Insert</button>
       <table class="table table-bordered">
         <thead>
           <tr>
+            <th></th>
             <th>ID</th>
             <th>First Name</th>
             <th>Last Name</th>
@@ -71,6 +73,7 @@
           data.forEach((item) => {
             const row = `
               <tr>
+                <td><button type="button" class="btn btn-info m-2" id="update_${item.id}">Update</button><button type="button" class="btn btn-danger" id="delete_${item.id}">Delete</button></td>
                 <td>${item.id}</td>
                 <td>${item.first_name}</td>
                 <td>${item.last_name}</td>
