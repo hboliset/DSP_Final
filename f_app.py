@@ -59,7 +59,8 @@ def home():
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        token = request.headers.get('Authorization')
+        token = request.headers.get('Authorization').split(" ")[1]
+        print("token = ",token)
         if not token:
             return jsonify({"message": "Token is missing"}), 403
         try:
@@ -73,6 +74,24 @@ def token_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+# # Token generation endpoint
+# @app.route('/get_token', methods=['GET'])
+# def get_token():
+#     if "user_id" in session:
+#         # Generate a token for the logged-in user
+#         token = jwt.encode(
+#             {
+#                 "user_id": session["user_id"],
+#                 "role": session["role"],
+#                 "exp": time.time() + 3600,
+#             },
+#             JWT_SECRET,
+#             algorithm="HS256"
+#         )
+#         return jsonify({"token": token})
+#     else:
+#         return jsonify({"message": "User not logged in"}), 403
 
 @app.route("/dashboard")
 def dashboard():
@@ -91,12 +110,9 @@ def dashboard():
         return jsonify({"message": "Token is missing"}), 403
     
     # Use token data from g (user_id, role)
-    if g.role == "H":
-        # Render the template for the admin role
-        return render_template("hadmin_data.html", user_id=g.user_id)
-    elif g.role == "R":
-        # Render the template for the user role
-        return render_template("ruser_data.html", user_id=g.user_id)
+    templates={"H":"hadmin_data.html","R":"ruser_data.html"}
+    if g.role in templates:
+        return render_template(templates[g.role],user_id=g.user_id)
     else:
         # If the role is not recognized, return an error message
         return jsonify({"message": "Unauthorized role"}), 403
@@ -123,28 +139,28 @@ def login():
         return redirect(url_for("dashboard", token=token))
     return jsonify({"message": "Invalid credentials"}), 401
 
-# Basic Access Control and Query Route
-@app.route('/query', methods=['GET'])
-@token_required
-def query():
-    role = g.role
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
+# # Basic Access Control and Query Route
+# @app.route('/query', methods=['GET'])
+# @token_required
+# def query():
+#     role = g.role
+#     db = get_db()
+#     cursor = db.cursor(dictionary=True)
 
-    if role == 'H':
-        cursor.execute("SELECT * FROM health_info")
-    elif role == 'R':
-        cursor.execute("SELECT id, gender, age, weight, height, health_history FROM health_info")
-    else:
-        return jsonify({"message": "Unauthorized"}), 403
+#     if role == 'H':
+#         cursor.execute("SELECT * FROM health_info")
+#     elif role == 'R':
+#         cursor.execute("SELECT id, gender, age, weight, height, health_history FROM health_info")
+#     else:
+#         return jsonify({"message": "Unauthorized"}), 403
 
-    results = cursor.fetchall()
-    # Query Integrity: Adding a hash of the results
-    query_hash = hashlib.sha256(str(results).encode()).hexdigest()
-    return jsonify({"data": results, "query_hash": query_hash})
+#     results = cursor.fetchall()
+#     # Query Integrity: Adding a hash of the results
+#     query_hash = hashlib.sha256(str(results).encode()).hexdigest()
+#     return jsonify({"data": results, "query_hash": query_hash})
 
 
-@app.route('/api/data', methods=['GET'])
+@app.route('/data', methods=['GET','POST'])
 @token_required  # Ensure only authenticated users can access this data
 def get_data():
     db = get_db()
@@ -154,11 +170,7 @@ def get_data():
         cursor.execute("SELECT * FROM health_info")
         results = cursor.fetchall()
         
-        # Decrypt sensitive fields before sending data
-        for record in results:
-            record['gender'] = cipher.decrypt(record['gender'].encode()).decode()
-            record['age'] = cipher.decrypt(record['age'].encode()).decode()
-        
+    
         return jsonify(results)  # Send the data as JSON
     except Exception as e:
         return jsonify({"message": "Error fetching data", "error": str(e)}), 500

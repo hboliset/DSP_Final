@@ -67,9 +67,6 @@
               <button type="button" class="btn btn-primary" id="login_btn">
                 Login
               </button>
-              <button type="button" class="btn btn-success" id="register_btn">
-                Register
-              </button>
             </div>
           </div>
         </div>
@@ -94,14 +91,6 @@
         .addEventListener("click", function (event) {
           event.preventDefault();
           document.getElementById("login_form").action = "/login";
-          document.getElementById("login_form").submit();
-        });
-
-      document
-        .getElementById("register_btn")
-        .addEventListener("click", function (event) {
-          event.preventDefault();
-          document.getElementById("login_form").action = "/register";
           document.getElementById("login_form").submit();
         });
     </script>
