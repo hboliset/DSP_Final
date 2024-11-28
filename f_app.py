@@ -146,8 +146,9 @@ def login():
     # If credentials are incorrect, return an error
     return jsonify({"message": "Invalid credentials"}), 401
 
+#Route to fetch data (GET)
 
-@app.route("/data", methods=["GET", "POST"])
+@app.route("/data", methods=["GET","POST"])
 @token_required  # Ensure only authenticated users can access this data
 def get_data():
     db = get_db()
@@ -164,25 +165,36 @@ def get_data():
     finally:
         cursor.close()
 
+#route to insert data (POST)
+@app.route("/insert", methods=["POST"])
+@token_required  # Ensure only authenticated users can insert data
+def insert_data():
+    try:
+        data = request.get_json()  # Retrieve the data sent in the request body
+        print("Received data:", data)
+        conn = get_db()
+        cursor = conn.cursor()
+        query = """
+            INSERT INTO health_info (first_name, last_name, gender, age, weight, height, health_history)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+        cursor.execute(query, (data['first_name'], data['last_name'], data['gender'], 
+                               data['age'], data['weight'], data['height'], data['health_history']))
+        conn.commit()
+        cursor.close()
+        return jsonify({"message": "Data inserted successfully!"}), 201
+    except Exception as e:
+        print(f"Error inserting data: {str(e)}")  # Log the error for debugging
+        return jsonify({"message": "Error inserting data", "error": str(e)}), 500
+
+
+
+
 @app.route("/data/<int:id>", methods=["GET", "POST"])
 @token_required  # Ensure only authenticated users can access this data
 def get_data_by_id(id):
     db = get_db()
     cursor = db.cursor(dictionary=True)
-
-    # Handle GET request: Retrieve data for a specific ID
-    if request.method == "GET":
-        try:
-            cursor.execute("SELECT * FROM health_info WHERE id = %s", (id,))
-            result = cursor.fetchone()
-
-            if result:
-                return jsonify(result), 200  # Return the record if found
-            else:
-                return jsonify({"message": "Data not found"}), 404
-
-        except Exception as e:
-            return jsonify({"message": "Error fetching data", "error": str(e)}), 500
 
     # Handle POST request: Update data for a specific ID
     if request.method == "POST":

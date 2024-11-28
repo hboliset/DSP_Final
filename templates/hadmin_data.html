@@ -16,6 +16,46 @@
     <div class="container mt-5">
       <h1>Data Table</h1>
       <button type="button" class="btn btn-success mb-2" id="insert">Insert</button>
+
+      <!-- Insert Data Form (Initially Hidden) -->
+      <div id="insert-form" class="mb-3" style="display: none;">
+        <h3>Insert New Data</h3>
+        <form id="data-form">
+          <div class="mb-3">
+            <label for="first_name" class="form-label">First Name</label>
+            <input type="text" class="form-control" id="first_name" required />
+          </div>
+          <div class="mb-3">
+            <label for="last_name" class="form-label">Last Name</label>
+            <input type="text" class="form-control" id="last_name" required />
+          </div>
+          <div class="mb-3">
+            <label for="gender" class="form-label">Gender</label>
+            <input type="text" class="form-control" id="gender" required />
+          </div>
+          <div class="mb-3">
+            <label for="age" class="form-label">Age</label>
+            <input type="number" class="form-control" id="age" required />
+          </div>
+          <div class="mb-3">
+            <label for="weight" class="form-label">Weight</label>
+            <input type="number" class="form-control" id="weight" required />
+          </div>
+          <div class="mb-3">
+            <label for="height" class="form-label">Height</label>
+            <input type="number" class="form-control" id="height" />
+          </div>
+          <div class="mb-3">
+            <label for="health_history" class="form-label">Health History</label>
+            <textarea class="form-control" id="health_history"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Insert Data</button>
+          <button type="button" class="btn btn-secondary" id="cancel-insert">Cancel</button>
+        </form>
+      </div>
+
+      <!-- Data Table -->
+
       <table class="table table-bordered">
         <thead>
           <tr>
@@ -97,6 +137,54 @@
   
     // Call fetchData with the token
     fetchData(apiToken);
+
+    // Handle Insert button click
+    $("#insert").click(function () {
+        $("#insert-form").toggle(); // Toggle form visibility
+      });
+
+      // Handle Insert form cancellation
+      $("#cancel-insert").click(function () {
+        $("#insert-form").hide();
+      });
+
+      // Handle Insert form submission
+      $("#data-form").submit(function (event) {
+        event.preventDefault();
+
+        // Collect form data
+        const formData = {
+          first_name: $("#first_name").val(),
+          last_name: $("#last_name").val(),
+          gender: $("#gender").val(),
+          age: $("#age").val(),
+          weight: $("#weight").val(),
+          height: $("#height").val(),
+          health_history: $("#health_history").val(),
+        };
+
+        console.log("Sending the following data:", formData);
+
+        // Send data via AJAX to insert it into the database
+        $.ajax({
+          url: "/insert",
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiToken}`,
+            "Content-Type": "application/json",
+            
+          },
+          data: JSON.stringify(formData),
+          success: function (insert) {
+            console.log("Data inserted successfully");
+            fetchData(apiToken); // Refresh the table with the new data
+            $("#insert-form").hide(); // Hide the form after submission
+          },
+          error: function (xhr, status, error) {
+            console.error("Error inserting data:", status, error);
+          },
+        });
+      });
   </script>
   </body>
 </html>
