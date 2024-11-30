@@ -30,6 +30,8 @@ mysql -u root -p < setup.sql
 ---
 
 Table Schema
+
+
 The database contains a single table with the following fields:
 
 FirstName (VARCHAR): Patient's first name.
