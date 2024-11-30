@@ -1,15 +1,16 @@
 import mysql.connector
 import bcrypt
+import hashlib
 import random
 import os
 from dotenv import load_dotenv
 
 
 load_dotenv()
-user=os.getenv("USER")
-password=os.getenv("PASSWORD")
+user=os.getenv("DB_USER")
+password=os.getenv("DB_PASSWORD")
 host=os.getenv("HOST")
-database=os.getenv("DATABASE")
+database=os.getenv("DB_NAME")
 
 # Predefined lists of names, genders, health history, etc.
 first_names = ['John', 'Jane', 'Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Hank']
@@ -45,9 +46,15 @@ for i in range(100):
     height = random.choice(heights)          # Randomly select height from the list
     health_history = random.choice(health_histories)  # Randomly select a health history
 
+    # Create a string representation of the data (excluding the ID)
+    data_string = f"{first_name}{last_name}{gender}{age}{weight}{height}{health_history}"
+
+    # Generate SHA-256 checksum of the data
+    data_hash = hashlib.sha256(data_string.encode('utf-8')).hexdigest()
+    
     cursor.execute(
-        "INSERT INTO health_info (first_name, last_name, gender, age, weight, height, health_history) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-        (first_name, last_name, gender, age, weight, height, health_history)
+        "INSERT INTO health_info (first_name, last_name, gender, age, weight, height, health_history, data_hash) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        (first_name, last_name, gender, age, weight, height, health_history, data_hash)
     )
 
 # Add users
