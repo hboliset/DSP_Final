@@ -13,7 +13,7 @@ This project is part of the **Data Security and Privacy (Fall 2024)** course. Th
 ### Prerequisites
 1. **GitHub Codespaces** or a local development environment.
 2. **MySQL** database installed on the system.
-3. Basic knowledge of SQL and Python (if applicable for encryption).
+3. Basic knowledge of SQL and Python.
 
 ---
 
