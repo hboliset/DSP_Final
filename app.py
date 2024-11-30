@@ -19,15 +19,12 @@ import os
 from dotenv import load_dotenv
 from flask_cors import CORS
 import requests
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives import hashes, serialization
 
 
 load_dotenv()
 user = os.getenv("DB_USER")
 password = os.getenv("DB_PASSWORD")
 database = os.getenv("DB_NAME")
-
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
@@ -43,11 +40,6 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:
     raise ValueError("JWT_SECRET environment variable not set.")
 
-#######
-# RSA Key Pair Generation (for demonstration; use pre-generated keys in production)
-private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-public_key = private_key.public_key()
-########
 
 # Database connection
 def get_db():
@@ -89,62 +81,6 @@ def token_required(f):
     return decorated_function
 
 
-####################
-
-# RSA Signature Functions
-def sign_hash(data_hash):
-    return private_key.sign(
-        data_hash.encode(),
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH,
-        ),
-        hashes.SHA256(),
-    )
-
-def verify_signature(data_hash, signature):
-    try:
-        public_key.verify(
-            signature,
-            data_hash.encode(),
-            padding.PSS(
-                mgf=padding.MGF1(hashes.SHA256()),
-                salt_length=padding.PSS.MAX_LENGTH,
-            ),
-            hashes.SHA256(),
-        )
-        return True
-    except Exception:
-        return False
-    
-# Merkle Tree Implementation for Query Completeness
-class MerkleTree:
-    def __init__(self, data):
-        self.data = data
-        self.tree = []
-        self.build_tree()
-
-    def build_tree(self):
-        hashes = [hashlib.sha256(str(item).encode()).hexdigest() for item in self.data]
-        self.tree.append(hashes)
-        while len(hashes) > 1:
-            parent_layer = []
-            for i in range(0, len(hashes), 2):
-                if i + 1 < len(hashes):
-                    combined = hashes[i] + hashes[i + 1]
-                else:
-                    combined = hashes[i]  # Handle odd number of nodes
-                parent_layer.append(hashlib.sha256(combined.encode()).hexdigest())
-            hashes = parent_layer
-            self.tree.append(hashes)
-
-    def get_root(self):
-        return self.tree[-1][0] if self.tree else None
-
-
-####################
-
-
 # Root route
 @app.route("/")
 def home():
@@ -152,55 +88,6 @@ def home():
         return redirect(url_for("login"))
     return "Welcome to the Secure Database API!"
 
-
-##################################################
-##################################################
-
-@app.route("/data/integrity", methods=["GET"])
-@token_required
-def get_data_with_integrity():
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
-
-    try:
-        cursor.execute("SELECT * FROM health_info")
-        results = cursor.fetchall()
-
-        # Compute hash and sign each data item
-        for item in results:
-            item_str = str(item)  # Convert data to a string representation
-            item_hash = hashlib.sha256(item_str.encode()).hexdigest()
-            item["hash"] = item_hash
-            item["signature"] = sign_hash(item_hash).hex()
-
-        return jsonify(results), 200
-    except Exception as e:
-        return jsonify({"message": "Error fetching data", "error": str(e)}), 500
-    finally:
-        cursor.close()
-
-@app.route("/data/completeness", methods=["GET"])
-@token_required
-def get_data_with_completeness():
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
-
-    try:
-        cursor.execute("SELECT * FROM health_info")
-        results = cursor.fetchall()
-
-        # Build Merkle tree
-        tree = MerkleTree(results)
-        root = tree.get_root()
-
-        return jsonify({"data": results, "merkle_root": root}), 200
-    except Exception as e:
-        return jsonify({"message": "Error fetching data", "error": str(e)}), 500
-    finally:
-        cursor.close()
-
-####################################################
-###################################################
 
 # Decorator for JWT Authentication
 @app.route("/dashboard")
@@ -282,6 +169,10 @@ def get_data():
 @app.route("/insert", methods=["POST"])
 @token_required  # Ensure only authenticated users can insert data
 def insert_data():
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"message": "Token is missing"}), 403
+
     try:
         data = request.get_json()  # Retrieve the data sent in the request body
         print("Received data:", data)
@@ -299,46 +190,6 @@ def insert_data():
     except Exception as e:
         print(f"Error inserting data: {str(e)}")  # Log the error for debugging
         return jsonify({"message": "Error inserting data", "error": str(e)}), 500
-
-
-
-
-@app.route("/data/<int:id>", methods=["GET", "POST"])
-@token_required  # Ensure only authenticated users can access this data
-def get_data_by_id(id):
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
-
-    # Handle POST request: Update data for a specific ID
-    if request.method == "POST":
-        try:
-            # Extract the updated data from the request
-            data = request.get_json()
-
-            # You can add validation for the incoming data if necessary
-            if not all(key in data for key in ["health_info", "other_field"]):  # Replace with actual fields
-                return jsonify({"message": "Missing required fields"}), 400
-
-            # Example query to update the health_info record
-            cursor.execute(
-                """
-                UPDATE health_info
-                SET health_info = %s, other_field = %s  # Replace with actual fields
-                WHERE id = %s
-                """,
-                (data["health_info"], data["other_field"], id),
-            )
-            db.commit()
-
-            if cursor.rowcount > 0:
-                return jsonify({"message": "Data updated successfully"}), 200
-            else:
-                return jsonify({"message": "No changes made"}), 400
-
-        except Exception as e:
-            return jsonify({"message": "Error updating data", "error": str(e)}), 500
-
-    return jsonify({"message": "Method Not Allowed"}), 405
 
 
 # Run the Flask app
