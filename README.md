@@ -22,4 +22,21 @@ This project is part of the **Data Security and Privacy (Fall 2024)** course. Th
 2. Start MySQL server:
    ```bash
    sudo service mysql start
+
+Create the database and table using the setup.sql script:
+
+mysql -u root -p < setup.sql
+
+---
+
+Table Schema
+The database contains a single table with the following fields:
+
+FirstName (VARCHAR): Patient's first name.
+LastName (VARCHAR): Patient's last name.
+Gender (BOOLEAN): Gender (0 = Female, 1 = Male).
+Age (INT): Age in years.
+Weight (FLOAT): Weight in kilograms.
+Height (FLOAT): Height in meters.
+HealthHistory (TEXT): Medical history.
    
