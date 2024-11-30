@@ -33,10 +33,22 @@ Table Schema
 The database contains a single table with the following fields:
 
 FirstName (VARCHAR): Patient's first name.
+
+
 LastName (VARCHAR): Patient's last name.
+
+
 Gender (BOOLEAN): Gender (0 = Female, 1 = Male).
+
+
 Age (INT): Age in years.
+
+
 Weight (FLOAT): Weight in kilograms.
+
+
 Height (FLOAT): Height in meters.
+
+
 HealthHistory (TEXT): Medical history.
    
