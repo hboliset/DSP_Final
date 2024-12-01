@@ -151,12 +151,24 @@ def login():
 @app.route("/data", methods=["GET","POST"])
 @token_required  # Ensure only authenticated users can access this data
 def get_data():
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"message": "Token is missing"}), 403
     db = get_db()
     cursor = db.cursor(dictionary=True)
 
     try:
         cursor.execute("SELECT * FROM health_info")
         results = cursor.fetchall()
+
+        for record in results:
+            # Concatenate fields that are part of the hash (adjust based on your requirements)
+            data_string = f"{record['first_name']}{record['last_name']}{record['health_history']}"
+            datahash = hashlib.sha256(data_string.encode()).hexdigest()
+
+            # Add the datahash to each record
+            record['datahash'] = datahash
+
 
         print(jsonify(results))
         return jsonify(results)  # Send the data as JSON
