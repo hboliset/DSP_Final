@@ -8,7 +8,7 @@ def connect_to_database():
         connection = mysql.connector.connect(
             host="localhost",      # Change if using a remote server
             user="root",           # Your MySQL root user
-            password="your_password",  # Replace with your MySQL root password
+            password="your_password",  
             database="dsp_db"      # Name of your database
         )
         print("Connection to MySQL established!")
