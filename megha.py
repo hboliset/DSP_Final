@@ -35,3 +35,63 @@ if __name__ == "__main__":
     # Step 3: Decrypt the message
     decrypted = decrypt_message(secret_key, encrypted)
     print(f"Decrypted Message: {decrypted}")
+
+
+
+import hashlib
+import getpass
+
+
+USER_DB = {}
+
+# Hash a password using SHA-256
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+# Register a new user
+def register_user(username, password):
+    if username in USER_DB:
+        print("Username already exists. Please choose a different username.")
+        return False
+    USER_DB[username] = hash_password(password)
+    print("User registered successfully!")
+    return True
+
+# Authenticate an existing user
+def authenticate_user(username, password):
+    if username not in USER_DB:
+        print("Authentication failed: User does not exist.")
+        return False
+    if USER_DB[username] == hash_password(password):
+        print("Authentication successful! Welcome!")
+        return True
+    else:
+        print("Authentication failed: Incorrect password.")
+        return False
+
+# Main application
+if __name__ == "__main__":
+    print("Welcome to the User Authentication System!")
+    while True:
+        print("\nOptions:")
+        print("1. Register")
+        print("2. Login")
+        print("3. Exit")
+        choice = input("Enter your choice (1/2/3): ")
+
+        if choice == "1":
+            username = input("Enter a username: ")
+            password = getpass.getpass("Enter a password: ")  # Use getpass to hide input
+            register_user(username, password)
+
+        elif choice == "2":
+            username = input("Enter your username: ")
+            password = getpass.getpass("Enter your password: ")
+            authenticate_user(username, password)
+
+        elif choice == "3":
+            print("Exiting the system. Goodbye!")
+            break
+
+        else:
+            print("Invalid choice. Please try again.")
