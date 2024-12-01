@@ -22,5 +22,16 @@ def decrypt_message(key, encrypted_message):
     return cipher.decrypt(ciphertext).decode()
 
 
+if __name__ == "__main__":
+    # Step 1: Generate a secure key
+    secret_key = generate_key()
+    print(f"Generated Key: {base64.b64encode(secret_key).decode()}")  # Display the key in a readable format
 
-    
+    # Step 2: Encrypt a message
+    message = "Sensitive data needs protection!"
+    encrypted = encrypt_message(secret_key, message)
+    print(f"Encrypted Message: {encrypted}")
+
+    # Step 3: Decrypt the message
+    decrypted = decrypt_message(secret_key, encrypted)
+    print(f"Decrypted Message: {decrypted}")
