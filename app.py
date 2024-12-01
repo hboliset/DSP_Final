@@ -146,6 +146,26 @@ def login():
     # If credentials are incorrect, return an error
     return jsonify({"message": "Invalid credentials"}), 401
 
+
+def hash_data(data):
+    return hashlib.sha256(data.encode('utf-8')).hexdigest()
+
+# Function to create the Merkle tree for a list of data hashes
+def create_merkle_tree(hashes):
+    while len(hashes) > 1:
+        if len(hashes) % 2 != 0:
+            # Duplicate the last hash if odd number of hashes
+            hashes.append(hashes[-1])
+
+        # Combine pairs of hashes
+        hashes = [
+            hash_data(hashes[i] + hashes[i + 1]) for i in range(0, len(hashes), 2)
+        ]
+
+    # Return the Merkle root (the final hash left)
+    return hashes[0] if hashes else None
+
+
 #Route to fetch data (GET)
 
 @app.route("/data", methods=["GET","POST"])
@@ -161,17 +181,32 @@ def get_data():
         cursor.execute("SELECT * FROM health_info")
         results = cursor.fetchall()
 
+         # List to store the hashes for Merkle tree
+        data_hashes = []
+        
         for record in results:
             # Concatenate fields that are part of the hash (adjust based on your requirements)
             data_string = f"{record['first_name']}{record['last_name']}{record['gender']}{record['age']}{record['weight']}{record['height']}{record['health_history']}"
-            data_hash = hashlib.sha256(data_string.encode()).hexdigest()
+                     
+            data_hash = hash_data(data_string)
+            data_hashes.append(data_hash)
 
             # Add the datahash to each record
             record['data_hash'] = data_hash
 
+        # Generate Merkle root from the hashes
+        merkle_root = create_merkle_tree(data_hashes)
 
-        print(jsonify(results))
-        return jsonify(results)  # Send the data as JSON
+        # Return data along with Merkle root
+        response = {
+            "data": results,
+            "merkle_root": merkle_root
+        }
+
+        return jsonify(response)
+            
+        # print(jsonify(results))
+        # return jsonify(results)  # Send the data as JSON
     except Exception as e:
         return jsonify({"message": "Error fetching data", "error": str(e)}), 500
     finally:

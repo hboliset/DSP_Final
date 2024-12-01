@@ -10,6 +10,10 @@
 <body>
     <div class="container mt-5">
         <h1>Data Table</h1>
+        <div>
+            <h3>Merkle Root:</h3>
+            <p id="merkleRoot">Loading...</p>  <!-- This will be updated with the Merkle root -->
+        </div>
         <button type="button" class="btn btn-success mb-2" id="insert">Insert</button>
 
         <!-- Insert Form -->
@@ -76,9 +80,10 @@
                 url: "/data",
                 method: "POST",
                 headers: { Authorization: `Bearer ${apiToken}` },
-                success: function (data) {
+                success: function (response) {
+                    if (Array.isArray(response.data)) {
                     $("#data-table-body").empty();
-                    data.forEach((item) => {
+                    response.data.forEach((item) => {
                         $("#data-table-body").append(`
                             <tr>
                                 <td>
@@ -96,7 +101,11 @@
                                 <td>${item.data_hash}</td>
                             </tr>
                         `);
-                    });
+                        });
+                    } else {console.error("Expected an array in the 'data' field, but got:", response.data);}
+                    console.log("Merkle Root:", response.merkle_root);
+                    const merkleRoot = response.merkle_root;
+                    $('#merkleRoot').text(merkleRoot);
                 },
                 error: function () {
                     alert("Failed to fetch data.");
