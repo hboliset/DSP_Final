@@ -227,6 +227,65 @@ def get_data():
     finally:
         cursor.close()
 
+
+@app.route("/Rdata", methods=["GET","POST"])
+@token_required  # Ensure only authenticated users can access this data
+def get_dataR():
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({"message": "Token is missing"}), 403
+    
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+
+    try:
+        cursor.execute("SELECT * FROM health_info")
+        results = cursor.fetchall()
+
+        # List to store the hashes for Merkle tree
+        data_hashes = []
+        limited_results = []  # Store only the required fields for user R
+        
+        for record in results:
+            # Prepare the response with only the required fields for user R
+            limited_record = {
+                "id": record["id"],
+                "age": record["age"],  # encrypted age
+                "gender": record["gender"],  # encrypted gender
+                "weight": record["weight"],
+                "height": record["height"],
+                "health_history": record["health_history"],
+                "data_hash": None  # Including data hash for integrity
+            }
+            
+
+            # Concatenate fields for Merkle Tree (excluding age and gender as they are encrypted)
+            data_string = f"{record['first_name']}{record['last_name']}{record['weight']}{record['height']}{record['health_history']}"
+            
+            data_hash = hash_data(data_string)
+
+            limited_record["data_hash"] = data_hash 
+            data_hashes.append(data_hash)
+
+            limited_results.append(limited_record)
+
+        # Generate Merkle root from the hashes
+        merkle_root = create_merkle_tree(data_hashes)
+
+        # Return data along with Merkle root
+        response = {
+            "data": limited_results,
+            "merkle_root": merkle_root
+        }
+
+        return jsonify(response)
+    
+    except Exception as e:
+        return jsonify({"message": "Error fetching data", "error": str(e)}), 500
+    finally:
+        cursor.close()
+
+
 #route to insert data (POST)
 @app.route("/insert", methods=["POST"])
 @token_required  # Ensure only authenticated users can insert data
