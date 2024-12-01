@@ -19,15 +19,13 @@ import os
 from dotenv import load_dotenv
 from flask_cors import CORS
 import requests
-import base64
 
 
 load_dotenv()
 user = os.getenv("DB_USER")
 password = os.getenv("DB_PASSWORD")
 database = os.getenv("DB_NAME")
-key = os.getenv("KEY").encode()
-
+key = os.getenv("KEY")
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -173,24 +171,32 @@ def create_merkle_tree(hashes):
 @token_required  # Ensure only authenticated users can access this data
 def get_data():
     token = request.headers.get('Authorization')
+    print("Received Token:", token)
     if not token:
         return jsonify({"message": "Token is missing"}), 403
-    
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+
     try:
-        db = get_db()
-        cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM health_info")
         results = cursor.fetchall()
 
          # List to store the hashes for Merkle tree
         data_hashes = []
+        decrypted_results = []
         
         for record in results:
+            try:
+                decrypted_age = cipher_suite.decrypt(record['age'].encode()).decode()
+                decrypted_gender = cipher_suite.decrypt(record['gender'].encode()).decode()
+            except Exception as decrypt_error:
+                print(f"Decryption failed for record ID {record['id']}: {decrypt_error}")
+                decrypted_age = "Decryption Error"
+                decrypted_gender = "Decryption Error"
 
-            # Decrypt age and gender for 'H' role
-            if g.role == 'H':
-                record['age'] = cipher_suite.decrypt(record['age'].encode()).decode()
-                record['gender'] = cipher_suite.decrypt(record['gender'].encode()).decode()
+            # Replace encrypted fields with decrypted values
+            record['age'] = decrypted_age
+            record['gender'] = decrypted_gender
 
             # Concatenate fields that are part of the hash (adjust based on your requirements)
             data_string = f"{record['first_name']}{record['last_name']}{record['weight']}{record['height']}{record['health_history']}"
@@ -201,12 +207,14 @@ def get_data():
             # Add the datahash to each record
             record['data_hash'] = data_hash
 
+            decrypted_results.append(record)
+
         # Generate Merkle root from the hashes
         merkle_root = create_merkle_tree(data_hashes)
 
         # Return data along with Merkle root
         response = {
-            "data": results,
+            "data": decrypted_results,
             "merkle_root": merkle_root
         }
 
@@ -230,12 +238,13 @@ def insert_data():
     try:
         data = request.get_json()  # Retrieve the data sent in the request body
         print("Received data:", data)
-        conn = get_db()
-        cursor = conn.cursor()
 
+        # Encrypt sensitive fields
         encrypted_age = cipher_suite.encrypt(data['age'].encode()).decode()
         encrypted_gender = cipher_suite.encrypt(data['gender'].encode()).decode()
 
+        conn = get_db()
+        cursor = conn.cursor()
         query = """
             INSERT INTO health_info (first_name, last_name, gender, age, weight, height, health_history)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -266,12 +275,6 @@ def update_data_with_hash_check(id):
             data = cursor.fetchone()
 
             if data:
-
-                # Decrypt age and gender for 'H' role
-                if g.role == 'H':
-                    data['age'] = cipher_suite.decrypt(data['age'].encode()).decode()
-                    data['gender'] = cipher_suite.decrypt(data['gender'].encode()).decode()
-
                 return jsonify(data), 200
             
             else:
@@ -286,9 +289,9 @@ def update_data_with_hash_check(id):
             if not all(key in data for key in ["first_name", "last_name", "gender", "age", "weight", "height", "health_history"]):
                 return jsonify({"message": "Missing required fields"}), 400
             
-            # Encrypt age and gender before storing in the database
-            encrypted_age = cipher_suite.encrypt(data['age'].encode()).decode()
-            encrypted_gender = cipher_suite.encrypt(data['gender'].encode()).decode()
+            # Encrypt age and gender
+            encrypted_age = cipher_suite.encrypt(str(data["age"]).encode()).decode()  # Encrypt and decode to store as string
+            encrypted_gender = cipher_suite.encrypt(data["gender"].encode()).decode()
 
             cursor.execute(
                 """
@@ -309,6 +312,9 @@ def update_data_with_hash_check(id):
             return jsonify({"message": "Error updating data", "error": str(e)}), 500
 
     return jsonify({"message": "Method Not Allowed"}), 405
+
+
+
 
 
 

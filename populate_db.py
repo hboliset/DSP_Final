@@ -57,10 +57,7 @@ try:
         encrypted_gender = cipher_suite.encrypt(str(gender).encode())  # Encrypt gender (True/False)
         encrypted_age = cipher_suite.encrypt(str(age).encode())        # Encrypt age (int)
 
-         # Convert encrypted data to base64 for storage
-        encoded_encrypted_gender = base64.b64encode(encrypted_gender).decode('utf-8')
-        encoded_encrypted_age = base64.b64encode(encrypted_age).decode('utf-8')
-
+         
         # Create a string representation of the data (excluding the ID)
         data_string = f"{first_name}{last_name}{weight}{height}{health_history}"
 
@@ -69,7 +66,7 @@ try:
 
         cursor.execute(
             "INSERT INTO health_info (first_name, last_name, gender, age, weight, height, health_history) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (first_name, last_name, encoded_encrypted_gender, encoded_encrypted_age, weight, height, health_history)
+            (first_name, last_name, encrypted_gender, encrypted_age, weight, height, health_history)
         )
 
     # Add users
