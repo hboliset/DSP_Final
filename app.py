@@ -163,11 +163,11 @@ def get_data():
 
         for record in results:
             # Concatenate fields that are part of the hash (adjust based on your requirements)
-            data_string = f"{record['first_name']}{record['last_name']}{record['health_history']}"
-            datahash = hashlib.sha256(data_string.encode()).hexdigest()
+            data_string = f"{record['first_name']}{record['last_name']}{record['gender']}{record['age']}{record['weight']}{record['height']}{record['health_history']}"
+            data_hash = hashlib.sha256(data_string.encode()).hexdigest()
 
             # Add the datahash to each record
-            record['datahash'] = datahash
+            record['data_hash'] = data_hash
 
 
         print(jsonify(results))
@@ -202,6 +202,83 @@ def insert_data():
     except Exception as e:
         print(f"Error inserting data: {str(e)}")  # Log the error for debugging
         return jsonify({"message": "Error inserting data", "error": str(e)}), 500
+    
+#update code
+
+@app.route("/data/<int:id>", methods=["GET","POST"])
+@token_required
+def update_data_with_hash_check(id):
+    token = request.headers.get('Authorization')
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+
+    #Handle GET request
+    if request.method == "GET":
+        try:
+            # Fetch the current record to retrieve the old hash
+            cursor.execute("SELECT * FROM health_info WHERE id = %s", (id,))
+            data = cursor.fetchone()
+
+            if data:
+                return jsonify(data), 200
+            
+            else:
+                return jsonify({"Message": "Data not found"}), 404
+        except Exception as e:
+            return jsonify({"Message": "Error fetching data", "error": str(e)}), 500
+        
+    # Handle POST request to update data by ID
+    elif request.method == "POST":
+        try:
+            data = request.get_json()
+            if not all(key in data for key in ["first_name", "last_name", "gender", "age", "weight", "height", "health_history"]):
+                return jsonify({"message": "Missing required fields"}), 400
+
+            cursor.execute(
+                """
+                UPDATE health_info
+                SET first_name = %s, last_name = %s, gender = %s, age = %s, weight = %s, height = %s, health_history = %s
+                WHERE id = %s
+                """,
+                (data["first_name"], data["last_name"], data["gender"], data["age"], 
+                 data["weight"], data["height"], data["health_history"], id),
+            )
+            db.commit()
+
+            if cursor.rowcount > 0:
+                return jsonify({"message": "Data updated successfully"}), 200
+            else:
+                return jsonify({"message": "No changes made"}), 400
+        except Exception as e:
+            return jsonify({"message": "Error updating data", "error": str(e)}), 500
+
+    return jsonify({"message": "Method Not Allowed"}), 405
+
+
+
+
+
+
+@app.route("/delete/<int:id>", methods=["DELETE"])
+@token_required
+def delete_data(id):
+    db = get_db()
+    cursor = db.cursor()
+
+    try:
+        cursor.execute("DELETE FROM health_info WHERE id = %s", (id,))
+        db.commit()
+
+        if cursor.rowcount > 0:
+            return jsonify({"message": "Data deleted successfully"}), 200
+        else:
+            return jsonify({"message": "No data found for the given ID"}), 404
+
+    except Exception as e:
+        return jsonify({"message": "Error deleting data", "error": str(e)}), 500
+
+    finally:
+        cursor.close()
 
 
 # Run the Flask app

@@ -1,193 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Data Table</title>
-    <!-- CDN for Bootstrap CSS (for styling) -->
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <!-- JQuery -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  </head>
-  <body>
+</head>
+<body>
     <div class="container mt-5">
-      <h1>Data Table</h1>
-      <button type="button" class="btn btn-success mb-2" id="insert">Insert</button>
+        <h1>Data Table</h1>
+        <button type="button" class="btn btn-success mb-2" id="insert">Insert</button>
 
-      <!-- Insert Data Form (Initially Hidden) -->
-      <div id="insert-form" class="mb-3" style="display: none;">
-        <h3>Insert New Data</h3>
-        <form id="data-form">
-          <div class="mb-3">
-            <label for="first_name" class="form-label">First Name</label>
-            <input type="text" class="form-control" id="first_name" required />
-          </div>
-          <div class="mb-3">
-            <label for="last_name" class="form-label">Last Name</label>
-            <input type="text" class="form-control" id="last_name" required />
-          </div>
-          <div class="mb-3">
-            <label for="gender" class="form-label">Gender(0/1)</label>
-            <input type="text" class="form-control" id="gender" required />
-          </div>
-          <div class="mb-3">
-            <label for="age" class="form-label">Age</label>
-            <input type="number" class="form-control" id="age" required />
-          </div>
-          <div class="mb-3">
-            <label for="weight" class="form-label">Weight(in kgs)</label>
-            <input type="number" class="form-control" id="weight" required />
-          </div>
-          <div class="mb-3">
-            <label for="height" class="form-label">Height(in cms)</label>
-            <input type="number" class="form-control" id="height" />
-          </div>
-          <div class="mb-3">
-            <label for="health_history" class="form-label">Health History</label>
-            <textarea class="form-control" id="health_history"></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary">Insert Data</button>
-          <button type="button" class="btn btn-secondary" id="cancel-insert">Cancel</button>
-        </form>
-      </div>
+        <!-- Insert Form -->
+        <div id="insert-form" class="mb-3" style="display: none;">
+            <form id="data-form">
+                <input type="text" class="form-control mb-2" id="first_name" placeholder="First Name" required />
+                <input type="text" class="form-control mb-2" id="last_name" placeholder="Last Name" required />
+                <input type="text" class="form-control mb-2" id="gender" placeholder="Gender" required />
+                <input type="number" class="form-control mb-2" id="age" placeholder="Age" required />
+                <input type="number" class="form-control mb-2" id="weight" placeholder="Weight" required />
+                <input type="number" class="form-control mb-2" id="height" placeholder="Height" />
+                <textarea class="form-control mb-2" id="health_history" placeholder="Health History"></textarea>
+                <button type="submit" class="btn btn-primary">Insert</button>
+                <button type="button" class="btn btn-secondary" id="cancel-insert">Cancel</button>
+            </form>
+        </div>
 
-      <!-- Data Table -->
+        <!-- Update Form -->
+        <div id="update-form" class="mb-3" style="display: none;">
+            <h2>Update Data</h2>
+            <form id="update-data-form">
+                <input type="hidden" id="update-id" />
+                <input type="text" class="form-control mb-2" id="update-first_name" placeholder="First Name" required />
+                <input type="text" class="form-control mb-2" id="update-last_name" placeholder="Last Name" required />
+                <input type="text" class="form-control mb-2" id="update-gender" placeholder="Gender" required />
+                <input type="number" class="form-control mb-2" id="update-age" placeholder="Age" required />
+                <input type="number" class="form-control mb-2" id="update-weight" placeholder="Weight" required />
+                <input type="number" class="form-control mb-2" id="update-height" placeholder="Height" />
+                <textarea class="form-control mb-2" id="update-health_history" placeholder="Health History"></textarea>
+                <button type="submit" class="btn btn-warning">Update</button>
+                <button type="button" class="btn btn-secondary" id="cancel-update">Cancel</button>
+            </form>
+        </div>
 
-      <table class="table table-bordered">
-        <thead>
-          <tr>
-            <th></th>
-            <th>ID</th>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Gender(M-0/F-1)</th>
-            <th>Age</th>
-            <th>Weight(in kgs)</th>
-            <th>Height(in cms)</th>
-            <th>Health_History</th>
-            <th>Datahash</th>
-          </tr>
-        </thead>
-        <tbody id="data-table-body">
-          <!-- Data will be populated here using JavaScript -->
-        </tbody>
-      </table>
+        <!-- Data Table -->
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>ID</th>
+                    <th>First_Name</th>
+                    <th>Last_Name</th>
+                    <th>Gender</th>
+                    <th>Age</th>
+                    <th>Weight(in kgs)</th>
+                    <th>Height(in cms)</th>
+                    <th>Health_History</th>
+                    <th>data_hash</th>
+                </tr>
+            </thead>
+            <tbody id="data-table-body"></tbody>
+        </table>
     </div>
 
-    <!-- CDN for Bootstrap JS (for possible future interactivity) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const apiToken = new URLSearchParams(window.location.search).get("token");
+        if (!apiToken) {
+            alert("Token is missing. Please log in first.");
+            window.location.href = "/login"; // Redirect to login if no token is found
+        }
 
-   <!-- JavaScript to fetch data and populate table -->
-   <script>
-    // Function to get token from URL parameter
-    function getTokenFromUrl() {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('token'); // Assume the token is passed as ?token=your_token
-    }
-  
-    // Retrieve the token from URL
-    const apiToken = getTokenFromUrl();
-  
-    if (apiToken) {
-      console.log('Token retrieved from URL:', apiToken);
-    } else {
-      console.log('Token not found in URL');
-      // Optionally, redirect to login page or prompt user for credentials
-    }
-  
-    // Fetch data from the Flask API using AJAX
-    function fetchData(apiToken) {
-      console.log("FETCHING....");
-      $.ajax({
-        url: "/data",
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${apiToken}`,
-        },
-        success: function (data) {
-          const tableBody = $("#data-table-body");
-          console.log("Data fetched successfully:", data);
-  
-          // Loop through the data and create rows
-          data.forEach((item) => {
-            const row = `
-              <tr>
-                <td><button type="button" class="btn btn-info m-2" id="update_${item.id}">Update</button><button type="button" class="btn btn-danger" id="delete_${item.id}">Delete</button></td>
-                <td>${item.id}</td>
-                <td>${item.first_name}</td>
-                <td>${item.last_name}</td>
-                <td>${item.gender}</td>
-                <td>${item.age}</td>
-                <td>${item.weight}</td>
-                <td>${item.height}</td>
-                <td>${item.health_history}</td>
-                <td>${item.datahash}</td>
-              </tr>
-            `;
-  
-            // Append the row to the table body
-            tableBody.append(row);
-          });
-        },
-        error: function (xhr, status, error) {
-          console.error("Error fetching data:", status, error);
-        },
-      });
-    }
-  
-    // Call fetchData with the token
-    fetchData(apiToken);
+        function fetchData() {
+            $.ajax({
+                url: "/data",
+                method: "POST",
+                headers: { Authorization: `Bearer ${apiToken}` },
+                success: function (data) {
+                    $("#data-table-body").empty();
+                    data.forEach((item) => {
+                        $("#data-table-body").append(`
+                            <tr>
+                                <td>
+                                    <button class="btn btn-info btn-sm update-btn" data-id="${item.id}">Update</button>
+                                    <button class="btn btn-danger btn-sm delete-btn" data-id="${item.id}">Delete</button>
+                                </td>
+                                <td>${item.id}</td>
+                                <td>${item.first_name}</td>
+                                <td>${item.last_name}</td>
+                                <td>${item.gender}</td>
+                                <td>${item.age}</td>
+                                <td>${item.weight}</td>
+                                <td>${item.height}</td>
+                                <td>${item.health_history}</td>
+                                <td>${item.data_hash}</td>
+                            </tr>
+                        `);
+                    });
+                },
+                error: function () {
+                    alert("Failed to fetch data.");
+                },
+            });
+        }
 
-    // Handle Insert button click
-    $("#insert").click(function () {
-        $("#insert-form").toggle(); // Toggle form visibility
-      });
+        $(document).ready(function () {
+            console.log("API Token:", apiToken);  // Debugging line
 
-      // Handle Insert form cancellation
-      $("#cancel-insert").click(function () {
-        $("#insert-form").hide();
-      });
+            fetchData();
 
-      // Handle Insert form submission
-      $("#data-form").submit(function (event) {
-        event.preventDefault();
+            $("#insert").click(function () {
+                $("#insert-form").toggle();
+            });
 
-        // Collect form data
-        const formData = {
-          first_name: $("#first_name").val(),
-          last_name: $("#last_name").val(),
-          gender: $("#gender").val(),
-          age: $("#age").val(),
-          weight: $("#weight").val(),
-          height: $("#height").val(),
-          health_history: $("#health_history").val(),
-        };
+            $("#cancel-insert").click(function () {
+                $("#insert-form").hide();
+            });
 
-        console.log("Sending the following data:", formData);
+            $("#data-form").submit(function (e) {
+                e.preventDefault();
+                const formData = {
+                    first_name: $("#first_name").val(),
+                    last_name: $("#last_name").val(),
+                    gender: $("#gender").val(),
+                    age: $("#age").val(),
+                    weight: $("#weight").val(),
+                    height: $("#height").val(),
+                    health_history: $("#health_history").val(),
+                    Datahash: $("#data_hash").val(),
+                };
 
-        // Send data via AJAX to insert it into the database
-        $.ajax({
-          url: "/insert",
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${apiToken}`,
-            "Content-Type": "application/json",
-            
-          },
-          data: JSON.stringify(formData),
-          success: function (insert) {
-            console.log("Data inserted successfully");
-            fetchData(apiToken); // Refresh the table with the new data
-            $("#insert-form").hide(); // Hide the form after submission
-          },
-          error: function (xhr, status, error) {
-            console.error("Error inserting data:", status, error);
-          },
+                $.ajax({
+                    url: "/insert",
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${apiToken}` },
+                    contentType: "application/json",
+                    data: JSON.stringify(formData),
+                    success: function () {
+                        fetchData();
+                        $("#data-form")[0].reset();
+                        $("#insert-form").hide();
+                    },
+                    error: function () {
+                        alert("Failed to insert data.");
+                    },
+                });
+            });
+
+            $(document).on("click", ".update-btn", function () {
+                const id = $(this).data("id");
+                $.ajax({
+                    url: `/data/${id}`,
+                    method: "GET",
+                    headers: { Authorization: `Bearer ${apiToken}` },
+                    success: function (data) {
+                        $("#update-id").val(data.id);
+                        $("#update-first_name").val(data.first_name);
+                        $("#update-last_name").val(data.last_name);
+                        $("#update-gender").val(data.gender);
+                        $("#update-age").val(data.age);
+                        $("#update-weight").val(data.weight);
+                        $("#update-height").val(data.height);
+                        $("#update-health_history").val(data.health_history);
+                        $("#update-data_hash").val(data.data_hash);
+                        $("#update-form").show();
+                    },
+                    error: function () {
+                        alert("Failed to fetch data for update.");
+                    },
+                });
+            });
+
+            $("#update-data-form").submit(function (e) {
+                e.preventDefault();
+                const id = $("#update-id").val();
+                const formData = {
+                    first_name: $("#update-first_name").val(),
+                    last_name: $("#update-last_name").val(),
+                    gender: $("#update-gender").val(),
+                    age: $("#update-age").val(),
+                    weight: $("#update-weight").val(),
+                    height: $("#update-height").val(),
+                    health_history: $("#update-health_history").val(),
+                    Datahash:$("#update-data_hash").val(),
+                };
+
+                $.ajax({
+                    url: `/data/${id}`,
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${apiToken}` },
+                    contentType: "application/json",
+                    data: JSON.stringify(formData),
+                    success: function () {
+                        fetchData();
+                        $("#update-form").hide();
+                    },
+                    error: function () {
+                        alert("Failed to update data.");
+                    },
+                });
+            });
+
+            $("#cancel-update").click(function () {
+                $("#update-form").hide();
+            });
+
+            $(document).on("click", ".delete-btn", function () {
+                const id = $(this).data("id");
+                $.ajax({
+                    url: `/delete/${id}`,
+                    method: "DELETE",
+                    headers: { Authorization: `Bearer ${apiToken}` },
+                    success: function () {
+                        fetchData();
+                    },
+                    error: function () {
+                        alert("Failed to delete data.");
+                    },
+                });
+            });
         });
-      });
-  </script>
-  </body>
+    </script>
+</body>
 </html>
