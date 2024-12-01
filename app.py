@@ -19,21 +19,22 @@ import os
 from dotenv import load_dotenv
 from flask_cors import CORS
 import requests
+import base64
 
 
 load_dotenv()
 user = os.getenv("DB_USER")
 password = os.getenv("DB_PASSWORD")
 database = os.getenv("DB_NAME")
+key = os.getenv("KEY").encode()
+
+
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
 
-# Encryption and Decryption Setup
-FERNET_SECRET = os.getenv("SECRET_KEY")
-if not FERNET_SECRET:
-    raise ValueError("FERNET_SECRET environment variable not set.")
-cipher = Fernet(FERNET_SECRET)
+# Initialize the Fernet cipher
+cipher_suite = Fernet(key)
 
 # JWT Secret for Encoding/Decoding tokens
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -174,10 +175,10 @@ def get_data():
     token = request.headers.get('Authorization')
     if not token:
         return jsonify({"message": "Token is missing"}), 403
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
-
+    
     try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM health_info")
         results = cursor.fetchall()
 
@@ -185,8 +186,14 @@ def get_data():
         data_hashes = []
         
         for record in results:
+
+            # Decrypt age and gender for 'H' role
+            if g.role == 'H':
+                record['age'] = cipher_suite.decrypt(record['age'].encode()).decode()
+                record['gender'] = cipher_suite.decrypt(record['gender'].encode()).decode()
+
             # Concatenate fields that are part of the hash (adjust based on your requirements)
-            data_string = f"{record['first_name']}{record['last_name']}{record['gender']}{record['age']}{record['weight']}{record['height']}{record['health_history']}"
+            data_string = f"{record['first_name']}{record['last_name']}{record['weight']}{record['height']}{record['health_history']}"
                      
             data_hash = hash_data(data_string)
             data_hashes.append(data_hash)
@@ -225,12 +232,16 @@ def insert_data():
         print("Received data:", data)
         conn = get_db()
         cursor = conn.cursor()
+
+        encrypted_age = cipher_suite.encrypt(data['age'].encode()).decode()
+        encrypted_gender = cipher_suite.encrypt(data['gender'].encode()).decode()
+
         query = """
             INSERT INTO health_info (first_name, last_name, gender, age, weight, height, health_history)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
-        cursor.execute(query, (data['first_name'], data['last_name'], data['gender'], 
-                               data['age'], data['weight'], data['height'], data['health_history']))
+        cursor.execute(query, (data['first_name'], data['last_name'], encrypted_gender, 
+                               encrypted_age, data['weight'], data['height'], data['health_history']))
         conn.commit()
         cursor.close()
         return jsonify({"message": "Data inserted successfully!"}), 201
@@ -255,6 +266,12 @@ def update_data_with_hash_check(id):
             data = cursor.fetchone()
 
             if data:
+
+                # Decrypt age and gender for 'H' role
+                if g.role == 'H':
+                    data['age'] = cipher_suite.decrypt(data['age'].encode()).decode()
+                    data['gender'] = cipher_suite.decrypt(data['gender'].encode()).decode()
+
                 return jsonify(data), 200
             
             else:
@@ -268,6 +285,10 @@ def update_data_with_hash_check(id):
             data = request.get_json()
             if not all(key in data for key in ["first_name", "last_name", "gender", "age", "weight", "height", "health_history"]):
                 return jsonify({"message": "Missing required fields"}), 400
+            
+            # Encrypt age and gender before storing in the database
+            encrypted_age = cipher_suite.encrypt(data['age'].encode()).decode()
+            encrypted_gender = cipher_suite.encrypt(data['gender'].encode()).decode()
 
             cursor.execute(
                 """
@@ -275,7 +296,7 @@ def update_data_with_hash_check(id):
                 SET first_name = %s, last_name = %s, gender = %s, age = %s, weight = %s, height = %s, health_history = %s
                 WHERE id = %s
                 """,
-                (data["first_name"], data["last_name"], data["gender"], data["age"], 
+                (data["first_name"], data["last_name"], encrypted_gender, encrypted_age, 
                  data["weight"], data["height"], data["health_history"], id),
             )
             db.commit()
@@ -288,9 +309,6 @@ def update_data_with_hash_check(id):
             return jsonify({"message": "Error updating data", "error": str(e)}), 500
 
     return jsonify({"message": "Method Not Allowed"}), 405
-
-
-
 
 
 
