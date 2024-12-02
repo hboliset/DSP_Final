@@ -95,3 +95,63 @@ if __name__ == "__main__":
 
         else:
             print("Invalid choice. Please try again.")
+
+
+
+
+
+import hashlib
+
+# A mock database to simulate storage
+DATABASE = {}
+
+# Function to calculate the hash of a data item
+def calculate_hash(data_item):
+    return hashlib.sha256(data_item.encode()).hexdigest()
+
+# Store data with its integrity hash
+def store_data(data_id, data_item):
+    data_hash = calculate_hash(data_item)
+    DATABASE[data_id] = {"data": data_item, "hash": data_hash}
+    print(f"Data stored successfully! Data ID: {data_id}")
+
+# Retrieve and verify data integrity
+def retrieve_data(data_id):
+    if data_id not in DATABASE:
+        print("Error: Data ID not found.")
+        return None
+    stored_data = DATABASE[data_id]
+    data_item = stored_data["data"]
+    stored_hash = stored_data["hash"]
+
+    # Recalculate the hash to verify integrity
+    calculated_hash = calculate_hash(data_item)
+    if calculated_hash == stored_hash:
+        print("Data integrity verified. No modifications detected.")
+        return data_item
+    else:
+        print("Data integrity check failed! The data might have been modified.")
+        return None
+
+if __name__ == "__main__":
+    print("Single Data Item Integrity System")
+    
+    # Simulate storing data
+    data_id = "item1"
+    data_item = "This is a secure data item."
+    store_data(data_id, data_item)
+    
+    # Simulate retrieving and verifying data
+    print("\nRetrieving data...")
+    retrieved_data = retrieve_data(data_id)
+    if retrieved_data:
+        print(f"Retrieved Data: {retrieved_data}")
+    
+    # Simulate tampering with the data in the mock database
+    print("\nSimulating data tampering...")
+    DATABASE[data_id]["data"] = "This data has been tampered with!"
+    
+    # Verify tampered data
+    print("\nRetrieving tampered data...")
+    retrieve_data(data_id)
+
