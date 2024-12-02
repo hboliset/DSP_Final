@@ -72,7 +72,7 @@ The password hashing ensures that even if the authentication data is compromised
 The solution does not rely on the database for password management but instead employs a standalone mechanism, maintaining full control over the authentication process.
 
 ---
-Basic Access Control Mechanism (5 pts)
+Basic Access Control Mechanism 
 To support access control for two distinct groups of users, Group H (high-privilege users) and Group R (restricted-access users), we developed a mechanism that enforces role-based access. The implemented system adheres to the following principles:
 
 Group H Access:
