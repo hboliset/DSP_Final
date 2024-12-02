@@ -93,4 +93,7 @@ Only users from Group H can execute data addition operations, enforcing stricter
 ----
 
 
-   
+   System Design and Security Considerations
+The authentication and access control mechanisms are integrated seamlessly to ensure that users can only perform actions appropriate to their roles.
+Hashing and role-based access control prevent unauthorized data access and ensure that sensitive information is protected from disclosure.
+By implementing custom authentication and access control mechanisms, the system avoids reliance on external databases for critical security functions, reducing the attack surface and enhancing security.
