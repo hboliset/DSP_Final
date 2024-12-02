@@ -70,4 +70,27 @@ Implementation Highlights:
 
 The password hashing ensures that even if the authentication data is compromised, the original passwords remain undisclosed.
 The solution does not rely on the database for password management but instead employs a standalone mechanism, maintaining full control over the authentication process.
+
+---
+Basic Access Control Mechanism (5 pts)
+To support access control for two distinct groups of users, Group H (high-privilege users) and Group R (restricted-access users), we developed a mechanism that enforces role-based access. The implemented system adheres to the following principles:
+
+Group H Access:
+Users in Group H have full privileges, including:
+
+Access to all fields (e.g., first name, last name, and other attributes).
+Permissions to query, view, and add new data items to the database.
+Group R Access:
+Users in Group R have restricted privileges:
+
+They can query existing data items but are prohibited from viewing sensitive fields such as first name and last name.
+They do not have permission to add new data items to the database.
+Implementation Details:
+
+When a user queries data, their group membership is checked. If the user belongs to Group R, fields like first name and last name are automatically excluded from the returned data.
+Only users from Group H can execute data addition operations, enforcing stricter control over data modification.
+
+----
+
+
    
