@@ -53,4 +53,21 @@ Height (FLOAT): Height in meters.
 
 
 HealthHistory (TEXT): Medical history.
+
+
+----
+Security Features Evaluation
+1. User Authentication 
+To ensure secure access to the system, we implemented a custom user authentication mechanism using username and password. The design avoids storing plain-text passwords by employing secure hashing techniques, as follows:
+
+Username and Password Authentication:
+Each user is required to authenticate themselves using a valid username and password combination before accessing the system. This ensures that only legitimate users are granted access.
+
+Secure Password Storage:
+The system uses the SHA-256 hashing algorithm to hash user passwords before storing them. The original password is never stored, ensuring enhanced security. During login, the password provided by the user is hashed again, and the resulting hash is compared with the stored hash for authentication.
+
+Implementation Highlights:
+
+The password hashing ensures that even if the authentication data is compromised, the original passwords remain undisclosed.
+The solution does not rely on the database for password management but instead employs a standalone mechanism, maintaining full control over the authentication process.
    
